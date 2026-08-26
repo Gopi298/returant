@@ -1,6 +1,562 @@
-numpy==1.21.4
-pickle-mixin==1.0.2
-streamlit==1.2.0
-streamlit-option-menu==0.3.2
-scikit-learn==1.0.1
-protobuf==3.20.1
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Restaurant AI Chatbot</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #ff512f, #dd2476);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.chat-container {
+    width: 450px;
+    height: 700px;
+    background: white;
+    border-radius: 25px;
+    overflow: hidden;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    background: linear-gradient(135deg, #ff512f, #dd2476);
+    color: white;
+    padding: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h2 {
+    font-size: 24px;
+}
+
+.header p {
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.online {
+    font-size: 12px;
+}
+
+.chat-box {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f8f8f8;
+}
+
+.message {
+    max-width: 82%;
+    padding: 13px 16px;
+    margin-bottom: 14px;
+    border-radius: 18px;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.bot {
+    background: #eeeeee;
+    color: #222;
+    border-bottom-left-radius: 5px;
+}
+
+.user {
+    background: #ff512f;
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 5px;
+}
+
+.quick-buttons {
+    padding: 10px;
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    border-top: 1px solid #ddd;
+}
+
+.quick-buttons button {
+    border: none;
+    background: #fff0eb;
+    color: #e64120;
+    padding: 9px 13px;
+    border-radius: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.input-area {
+    display: flex;
+    gap: 10px;
+    padding: 15px;
+    border-top: 1px solid #ddd;
+    background: white;
+}
+
+.input-area input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    padding: 13px 18px;
+    outline: none;
+    font-size: 14px;
+}
+
+.send-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    background: #ff512f;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.send-btn:hover {
+    transform: scale(1.05);
+}
+
+@media(max-width:500px) {
+
+    body {
+        align-items: stretch;
+    }
+
+    .chat-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <div class="header">
+        <div>
+            <h2>🍴 Foodie AI</h2>
+            <p>Restaurant Assistant</p>
+        </div>
+
+        <div class="online">
+            🟢 Online
+        </div>
+    </div>
+
+
+    <div id="chatBox" class="chat-box">
+
+        <div class="message bot">
+            👋 Hello! Welcome to <b>Foodie Restaurant</b>.
+            <br><br>
+            I can help you with:
+            <br>🍴 Menu
+            <br>🥗 Vegetarian food
+            <br>🍗 Non-vegetarian food
+            <br>💰 Prices
+            <br>📅 Table booking
+            <br>📍 Location
+        </div>
+
+    </div>
+
+
+    <div class="quick-buttons">
+
+        <button onclick="quickMessage('Show me the menu')">
+            🍴 Menu
+        </button>
+
+        <button onclick="quickMessage('Show vegetarian food')">
+            🥗 Veg
+        </button>
+
+        <button onclick="quickMessage('Show non vegetarian food')">
+            🍗 Non-Veg
+        </button>
+
+        <button onclick="quickMessage('I want to book a table')">
+            📅 Booking
+        </button>
+
+        <button onclick="quickMessage('What is your location?')">
+            📍 Location
+        </button>
+
+    </div>
+
+
+    <div class="input-area">
+
+        <input
+            id="userInput"
+            type="text"
+            placeholder="Ask about menu, food, booking..."
+            onkeypress="handleKey(event)"
+        >
+
+        <button class="send-btn" onclick="sendMessage()">
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const menu = {
+
+    pizza: [
+        ["Margherita Pizza", 250],
+        ["Paneer Pizza", 320],
+        ["Chicken Pizza", 350]
+    ],
+
+    biryani: [
+        ["Veg Biryani", 180],
+        ["Chicken Biryani", 250],
+        ["Mutton Biryani", 320]
+    ],
+
+    starters: [
+        ["Paneer Tikka", 220],
+        ["Chicken 65", 240],
+        ["Gobi Manchurian", 180]
+    ]
+
+};
+
+
+function addMessage(text, type) {
+
+    const chatBox = document.getElementById("chatBox");
+
+    const message = document.createElement("div");
+
+    message.className = "message " + type;
+
+    message.innerHTML = text;
+
+    chatBox.appendChild(message);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+
+function sendMessage() {
+
+    const input = document.getElementById("userInput");
+
+    const text = input.value.trim();
+
+    if (text === "") {
+        return;
+    }
+
+    addMessage(text, "user");
+
+    input.value = "";
+
+    setTimeout(function() {
+
+        const response = getBotResponse(text);
+
+        addMessage(response, "bot");
+
+    }, 500);
+}
+
+
+function quickMessage(text) {
+
+    document.getElementById("userInput").value = text;
+
+    sendMessage();
+}
+
+
+function handleKey(event) {
+
+    if (event.key === "Enter") {
+
+        sendMessage();
+
+    }
+
+}
+
+
+function getBotResponse(message) {
+
+    const text = message.toLowerCase();
+
+
+    /* HELLO */
+
+    if (
+        text.includes("hello") ||
+        text.includes("hi") ||
+        text.includes("hey")
+    ) {
+
+        return `
+        👋 Hello!
+        <br><br>
+        Welcome to <b>Foodie Restaurant</b>.
+        <br><br>
+        How can I help you today?
+        `;
+
+    }
+
+
+    /* MENU */
+
+    if (
+        text.includes("menu") ||
+        text.includes("food")
+    ) {
+
+        return `
+        <b>🍴 Our Menu</b>
+        <br><br>
+
+        🍕 <b>Pizza</b>
+        <br>
+        Margherita Pizza - ₹250
+        <br>
+        Paneer Pizza - ₹320
+        <br>
+        Chicken Pizza - ₹350
+
+        <br><br>
+
+        🍚 <b>Biryani</b>
+        <br>
+        Veg Biryani - ₹180
+        <br>
+        Chicken Biryani - ₹250
+        <br>
+        Mutton Biryani - ₹320
+
+        <br><br>
+
+        🥘 <b>Starters</b>
+        <br>
+        Paneer Tikka - ₹220
+        <br>
+        Chicken 65 - ₹240
+        <br>
+        Gobi Manchurian - ₹180
+        `;
+
+    }
+
+
+    /* VEG */
+
+    if (
+        text.includes("veg") ||
+        text.includes("vegetarian")
+    ) {
+
+        return `
+        🥗 <b>Vegetarian Menu</b>
+        <br><br>
+
+        🍕 Margherita Pizza - ₹250
+        <br>
+        🍕 Paneer Pizza - ₹320
+        <br>
+        🍚 Veg Biryani - ₹180
+        <br>
+        🧀 Paneer Tikka - ₹220
+        <br>
+        🥦 Gobi Manchurian - ₹180
+        `;
+
+    }
+
+
+    /* NON VEG */
+
+    if (
+        text.includes("non veg") ||
+        text.includes("non-veg") ||
+        text.includes("chicken") ||
+        text.includes("mutton")
+    ) {
+
+        return `
+        🍗 <b>Non-Vegetarian Menu</b>
+        <br><br>
+
+        🍕 Chicken Pizza - ₹350
+        <br>
+        🍚 Chicken Biryani - ₹250
+        <br>
+        🍚 Mutton Biryani - ₹320
+        <br>
+        🍗 Chicken 65 - ₹240
+        `;
+
+    }
+
+
+    /* PRICE */
+
+    if (
+        text.includes("price") ||
+        text.includes("cost") ||
+        text.includes("how much")
+    ) {
+
+        return `
+        💰 Our food prices start from <b>₹180</b>.
+        <br><br>
+
+        Please tell me the dish name
+        and I can show you the price.
+        `;
+
+    }
+
+
+    /* BOOKING */
+
+    if (
+        text.includes("book") ||
+        text.includes("booking") ||
+        text.includes("reservation") ||
+        text.includes("table")
+    ) {
+
+        return `
+        📅 <b>Table Reservation</b>
+        <br><br>
+
+        I can help you reserve a table.
+        <br><br>
+
+        Please provide:
+        <br>👥 Number of people
+        <br>📅 Date
+        <br>⏰ Time
+        <br><br>
+
+        Example:
+        <br>
+        <i>4 people, August 30, 7:30 PM</i>
+        `;
+
+    }
+
+
+    /* LOCATION */
+
+    if (
+        text.includes("location") ||
+        text.includes("address") ||
+        text.includes("where")
+    ) {
+
+        return `
+        📍 <b>Foodie Restaurant</b>
+        <br><br>
+
+        Chennai, Tamil Nadu
+        <br><br>
+
+        🕐 <b>Opening Hours</b>
+        <br>
+        10:00 AM - 11:00 PM
+        `;
+
+    }
+
+
+    /* HOURS */
+
+    if (
+        text.includes("open") ||
+        text.includes("timing") ||
+        text.includes("hours")
+    ) {
+
+        return `
+        🕐 <b>Restaurant Hours</b>
+        <br><br>
+
+        Monday - Sunday
+        <br>
+        10:00 AM - 11:00 PM
+        `;
+
+    }
+
+
+    /* THANK YOU */
+
+    if (text.includes("thank")) {
+
+        return `
+        😊 You're welcome!
+        <br><br>
+        Thank you for choosing
+        <b>Foodie Restaurant</b>! 🍴
+        `;
+
+    }
+
+
+    /* DEFAULT */
+
+    return `
+    🤖 I'm your Foodie Restaurant Assistant.
+    <br><br>
+
+    I can help with:
+    <br>🍴 Menu
+    <br>🥗 Vegetarian food
+    <br>🍗 Non-vegetarian food
+    <br>💰 Prices
+    <br>📅 Table booking
+    <br>📍 Location
+    <br>🕐 Opening hours
+
+    <br><br>
+
+    Try asking:
+    <br>
+    <i>"Show me the menu"</i>
+    `;
+
+}
+
+</script>
+
+</body>
+</html>
