@@ -1,414 +1,162 @@
 import streamlit as st
-import streamlit.components.v1 as components
+
+# --------------------------------------------------
+# PAGE CONFIGURATION
+# --------------------------------------------------
 
 st.set_page_config(
-    page_title="Snake Game",
-    page_icon="🐍",
+    page_title="Login System",
+    page_icon="🔐",
     layout="centered"
 )
 
-st.markdown(
-    """
-    <style>
-        .main {
-            text-align: center;
-        }
+# --------------------------------------------------
+# CUSTOM CSS
+# --------------------------------------------------
 
-        h1 {
-            text-align: center;
-        }
-
-        .game-info {
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-st.title("🐍 Snake Game")
-
-st.markdown(
-    '<div class="game-info">Use Arrow Keys or WASD to move the snake</div>',
-    unsafe_allow_html=True
-)
-
-game_html = """
-<!DOCTYPE html>
-<html>
-<head>
-
+st.markdown("""
 <style>
 
-body {
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    font-family: Arial, sans-serif;
+.login-container {
+    max-width: 450px;
+    margin: auto;
+    padding: 30px;
+}
+
+.title {
     text-align: center;
-}
-
-#gameContainer {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-}
-
-canvas {
-    border: 4px solid #222;
-    background-color: #111;
-    border-radius: 10px;
-}
-
-#score {
-    font-size: 22px;
+    font-size: 35px;
     font-weight: bold;
-    margin: 10px;
+    margin-bottom: 10px;
 }
 
-#message {
-    font-size: 20px;
-    font-weight: bold;
-    margin: 10px;
-}
-
-button {
-    padding: 10px 25px;
-    font-size: 17px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background-color: #2196F3;
-    color: white;
-}
-
-button:hover {
-    background-color: #1976D2;
+.subtitle {
+    text-align: center;
+    color: gray;
+    margin-bottom: 30px;
 }
 
 </style>
+""", unsafe_allow_html=True)
 
-</head>
+# --------------------------------------------------
+# USER DATABASE
+# --------------------------------------------------
 
-<body>
-
-<div id="gameContainer">
-
-<div id="score">
-    Score: <span id="scoreValue">0</span>
-</div>
-
-<canvas id="gameCanvas" width="500" height="500"></canvas>
-
-<div id="message">
-    Press Arrow Keys or WASD to start
-</div>
-
-<button onclick="restartGame()">🔄 Restart Game</button>
-
-</div>
-
-<script>
-
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-const gridSize = 25;
-const tileCount = canvas.width / gridSize;
-
-let snake;
-let food;
-
-let dx;
-let dy;
-
-let score;
-let gameRunning;
-let gameOver;
-
-let gameSpeed = 100;
-
-function initializeGame() {
-
-    snake = [
-        {x: 10, y: 10},
-        {x: 9, y: 10},
-        {x: 8, y: 10}
-    ];
-
-    food = {
-        x: Math.floor(Math.random() * tileCount),
-        y: Math.floor(Math.random() * tileCount)
-    };
-
-    dx = 0;
-    dy = 0;
-
-    score = 0;
-
-    gameRunning = false;
-    gameOver = false;
-
-    document.getElementById("scoreValue").innerText = score;
-
-    document.getElementById("message").innerText =
-        "Press Arrow Keys or WASD to start";
-
-    drawGame();
+USERS = {
+    "admin": "admin123",
+    "gopi": "gopi123",
+    "user": "user123"
 }
 
-function drawGame() {
+# --------------------------------------------------
+# SESSION STATE
+# --------------------------------------------------
 
-    ctx.fillStyle = "#111";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-    // Draw grid
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
-    ctx.strokeStyle = "#222";
+# --------------------------------------------------
+# LOGOUT
+# --------------------------------------------------
 
-    for (let x = 0; x <= canvas.width; x += gridSize) {
+def logout():
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.rerun()
 
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
+# --------------------------------------------------
+# LOGIN PAGE
+# --------------------------------------------------
 
-    }
+if not st.session_state.logged_in:
 
-    for (let y = 0; y <= canvas.height; y += gridSize) {
+    st.markdown(
+        '<div class="login-container">',
+        unsafe_allow_html=True
+    )
 
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
+    st.markdown(
+        '<div class="title">🔐 Login</div>',
+        unsafe_allow_html=True
+    )
 
-    }
+    st.markdown(
+        '<div class="subtitle">Please enter your username and password</div>',
+        unsafe_allow_html=True
+    )
 
-    // Draw food
+    username = st.text_input(
+        "Username",
+        placeholder="Enter username"
+    )
 
-    ctx.fillStyle = "red";
+    password = st.text_input(
+        "Password",
+        type="password",
+        placeholder="Enter password"
+    )
 
-    ctx.beginPath();
+    login_button = st.button(
+        "🔓 Login",
+        use_container_width=True
+    )
 
-    ctx.arc(
-        food.x * gridSize + gridSize / 2,
-        food.y * gridSize + gridSize / 2,
-        gridSize / 2 - 3,
-        0,
-        Math.PI * 2
-    );
+    if login_button:
 
-    ctx.fill();
+        if username in USERS and USERS[username] == password:
 
-    // Draw snake
+            st.session_state.logged_in = True
+            st.session_state.username = username
 
-    snake.forEach((segment, index) => {
+            st.success("Login successful!")
 
-        if (index === 0) {
-            ctx.fillStyle = "#00FF00";
-        } else {
-            ctx.fillStyle = "#32CD32";
-        }
+            st.rerun()
 
-        ctx.fillRect(
-            segment.x * gridSize + 2,
-            segment.y * gridSize + 2,
-            gridSize - 4,
-            gridSize - 4
-        );
+        else:
 
-    });
+            st.error("❌ Invalid username or password")
 
-}
+    st.markdown("</div>", unsafe_allow_html=True)
 
-function moveSnake() {
+# --------------------------------------------------
+# HOME PAGE AFTER LOGIN
+# --------------------------------------------------
 
-    if (!gameRunning || gameOver) {
-        return;
-    }
+else:
 
-    const head = {
-        x: snake[0].x + dx,
-        y: snake[0].y + dy
-    };
+    st.title("🏠 Welcome")
 
-    // Wall collision
+    st.success(
+        f"Welcome, {st.session_state.username}!"
+    )
 
-    if (
-        head.x < 0 ||
-        head.x >= tileCount ||
-        head.y < 0 ||
-        head.y >= tileCount
-    ) {
+    st.write(
+        "You have successfully logged into the application."
+    )
 
-        endGame();
-        return;
-    }
+    st.markdown("---")
 
-    // Snake collision
+    st.subheader("📊 Dashboard")
 
-    for (let i = 0; i < snake.length; i++) {
+    col1, col2, col3 = st.columns(3)
 
-        if (
-            head.x === snake[i].x &&
-            head.y === snake[i].y
-        ) {
+    with col1:
+        st.metric("Users", "100")
 
-            endGame();
-            return;
-        }
-    }
+    with col2:
+        st.metric("Projects", "25")
 
-    snake.unshift(head);
+    with col3:
+        st.metric("Status", "Active")
 
-    // Food collision
+    st.markdown("---")
 
-    if (
-        head.x === food.x &&
-        head.y === food.y
-    ) {
-
-        score += 10;
-
-        document.getElementById("scoreValue").innerText = score;
-
-        generateFood();
-
-    } else {
-
-        snake.pop();
-
-    }
-
-    drawGame();
-}
-
-function generateFood() {
-
-    let validPosition = false;
-
-    while (!validPosition) {
-
-        food.x = Math.floor(Math.random() * tileCount);
-        food.y = Math.floor(Math.random() * tileCount);
-
-        validPosition = true;
-
-        for (let segment of snake) {
-
-            if (
-                segment.x === food.x &&
-                segment.y === food.y
-            ) {
-
-                validPosition = false;
-                break;
-
-            }
-
-        }
-    }
-}
-
-function endGame() {
-
-    gameRunning = false;
-    gameOver = true;
-
-    document.getElementById("message").innerText =
-        "💥 Game Over! Your Score: " + score;
-
-    drawGame();
-}
-
-function restartGame() {
-
-    initializeGame();
-
-}
-
-function changeDirection(newDx, newDy) {
-
-    // Prevent snake from moving directly backwards
-
-    if (dx === -newDx && dy === -newDy) {
-        return;
-    }
-
-    dx = newDx;
-    dy = newDy;
-
-    gameRunning = true;
-
-    document.getElementById("message").innerText =
-        "Game Running 🐍";
-}
-
-document.addEventListener("keydown", function(event) {
-
-    const key = event.key.toLowerCase();
-
-    if (key === "arrowup" || key === "w") {
-
-        changeDirection(0, -1);
-
-    }
-
-    else if (key === "arrowdown" || key === "s") {
-
-        changeDirection(0, 1);
-
-    }
-
-    else if (key === "arrowleft" || key === "a") {
-
-        changeDirection(-1, 0);
-
-    }
-
-    else if (key === "arrowright" || key === "d") {
-
-        changeDirection(1, 0);
-
-    }
-
-});
-
-initializeGame();
-
-setInterval(moveSnake, gameSpeed);
-
-</script>
-
-</body>
-</html>
-"""
-
-components.html(
-    game_html,
-    height=650,
-    scrolling=False
-)
-
-st.markdown("---")
-
-st.markdown(
-    """
-    ### 🎮 Controls
-
-    | Key | Movement |
-    |---|---|
-    | ⬆️ / W | Up |
-    | ⬇️ / S | Down |
-    | ⬅️ / A | Left |
-    | ➡️ / D | Right |
-
-    **🍎 Red = Food**  
-    **🐍 Green = Snake**  
-    **💥 Hit the wall or yourself = Game Over**
-    """
-)
+    if st.button(
+        "🚪 Logout",
+        use_container_width=True
+    ):
+        logout()
