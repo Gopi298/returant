@@ -27,11 +27,17 @@ model = load_model()
 # TITLE
 # ============================================================
 
-st.title("🩺 Diabetes Prediction System")
+st.title("🩺 Diabetes Prediction & Treatment Guidance System")
 
 st.write(
     "Machine Learning based diabetes risk prediction "
     "using patient clinical information."
+)
+
+st.warning(
+    "This application provides educational clinical guidance only. "
+    "It does not prescribe medication or insulin. "
+    "Treatment decisions must be made by a qualified healthcare professional."
 )
 
 st.divider()
@@ -53,7 +59,7 @@ pregnancies = st.sidebar.number_input(
 glucose = st.sidebar.number_input(
     "Glucose",
     min_value=0,
-    max_value=300,
+    max_value=500,
     value=120,
     step=1
 )
@@ -196,6 +202,240 @@ if st.button(
         f"{probability_percent:.2f}%"
     )
 
+    # ========================================================
+    # GLUCOSE LEVEL CLASSIFICATION
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("🩸 Glucose Level Assessment")
+
+    if glucose < 70:
+
+        glucose_category = "LOW"
+
+        st.error(
+            f"🔴 Low glucose: {glucose} mg/dL"
+        )
+
+        st.write(
+            "This may represent hypoglycemia. "
+            "Immediate clinical assessment may be required, "
+            "especially if the patient has symptoms."
+        )
+
+    elif glucose < 126:
+
+        glucose_category = "NORMAL / BELOW DIABETES THRESHOLD"
+
+        st.success(
+            f"🟢 Glucose level: {glucose} mg/dL"
+        )
+
+        st.write(
+            "This value is below the diagnostic fasting "
+            "diabetes threshold. Clinical interpretation "
+            "depends on whether the measurement was fasting "
+            "or taken after eating."
+        )
+
+    elif glucose < 200:
+
+        glucose_category = "ELEVATED"
+
+        st.warning(
+            f"🟡 Elevated glucose: {glucose} mg/dL"
+        )
+
+        st.write(
+            "Further evaluation with appropriate glucose "
+            "testing and/or HbA1c may be required."
+        )
+
+    elif glucose < 300:
+
+        glucose_category = "HIGH"
+
+        st.warning(
+            f"🟠 High glucose: {glucose} mg/dL"
+        )
+
+        st.write(
+            "High glucose requires clinical evaluation. "
+            "Treatment depends on diabetes type, HbA1c, "
+            "symptoms, kidney function, cardiovascular "
+            "risk and other patient-specific factors."
+        )
+
+    else:
+
+        glucose_category = "VERY HIGH"
+
+        st.error(
+            f"🔴 Very high glucose: {glucose} mg/dL"
+        )
+
+        st.write(
+            "Blood glucose ≥300 mg/dL is a level at which "
+            "insulin should be considered, particularly "
+            "when hyperglycemic symptoms are present. "
+            "This requires prompt medical evaluation."
+        )
+
+    # ========================================================
+    # TREATMENT GUIDANCE
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("💊 Treatment Guidance")
+
+    if glucose < 70:
+
+        st.error(
+            "Possible hypoglycemia"
+        )
+
+        st.write(
+            "Do not automatically start diabetes medication "
+            "based on this value. The cause of the low glucose "
+            "should be evaluated."
+        )
+
+        st.write(
+            "If the patient is taking insulin or glucose-lowering "
+            "medication, a healthcare professional should review "
+            "the treatment."
+        )
+
+    elif glucose < 126:
+
+        st.success(
+            "Lifestyle and monitoring category"
+        )
+
+        st.write(
+            "Depending on the patient's diagnosis and risk factors, "
+            "focus may include healthy nutrition, physical activity, "
+            "weight management and regular glucose monitoring."
+        )
+
+        st.write(
+            "Medication is not automatically indicated from this "
+            "single glucose value."
+        )
+
+    elif glucose < 200:
+
+        st.warning(
+            "Clinical evaluation category"
+        )
+
+        st.write(
+            "A healthcare professional may evaluate HbA1c, fasting "
+            "glucose and other clinical factors before selecting "
+            "a treatment plan."
+        )
+
+        st.write(
+            "For type 2 diabetes, medication selection is individualized."
+        )
+
+    elif glucose < 300:
+
+        st.warning(
+            "High glucose – medical evaluation recommended"
+        )
+
+        st.write(
+            "Treatment may involve lifestyle intervention plus "
+            "glucose-lowering medication depending on the confirmed "
+            "diagnosis and HbA1c."
+        )
+
+        st.write(
+            "Possible medication classes for type 2 diabetes include "
+            "metformin, GLP-1-based therapies, SGLT2 inhibitors and "
+            "other glucose-lowering medications. The appropriate "
+            "choice depends on the individual patient."
+        )
+
+    else:
+
+        st.error(
+            "Very high glucose – prompt medical evaluation"
+        )
+
+        st.write(
+            "Blood glucose ≥300 mg/dL may indicate severe "
+            "hyperglycemia."
+        )
+
+        st.write(
+            "According to ADA 2026 guidance, insulin should be "
+            "considered when blood glucose is ≥300 mg/dL or A1C "
+            "is >10%, particularly when hyperglycemic symptoms "
+            "are present."
+        )
+
+        st.write(
+            "Do NOT calculate or administer an insulin dose from "
+            "this application. Insulin type and dose require "
+            "individual clinical assessment."
+        )
+
+    # ========================================================
+    # DIABETES TYPE / MEDICATION NOTICE
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("📋 Medication Decision Factors")
+
+    st.write(
+        "A clinician may consider the following before selecting "
+        "therapy:"
+    )
+
+    factors = [
+        "HbA1c level",
+        "Fasting and post-meal glucose",
+        "Diabetes type",
+        "Age",
+        "Kidney function",
+        "Heart disease / cardiovascular risk",
+        "Weight and obesity status",
+        "Risk of hypoglycemia",
+        "Current medications",
+        "Pregnancy status",
+        "Diabetes symptoms",
+        "Duration of diabetes"
+    ]
+
+    for factor in factors:
+        st.write(
+            f"• {factor}"
+        )
+
+    # ========================================================
+    # EMERGENCY WARNING
+    # ========================================================
+
+    if glucose >= 300:
+
+        st.divider()
+
+        st.error(
+            "🚨 HIGH-RISK WARNING"
+        )
+
+        st.write(
+            "If very high glucose is accompanied by vomiting, "
+            "difficulty breathing, confusion, severe weakness, "
+            "dehydration or other severe symptoms, seek urgent "
+            "medical care."
+        )
+
 # ============================================================
 # INFORMATION
 # ============================================================
@@ -203,7 +443,7 @@ if st.button(
 st.divider()
 
 st.info(
-    "This application is for educational and research purposes. "
-    "It should not be used as a substitute for professional "
-    "medical diagnosis."
+    "This application is an educational machine-learning project. "
+    "The model prediction is not a medical diagnosis and the "
+    "treatment guidance is not a prescription."
 )
