@@ -1,596 +1,414 @@
 import streamlit as st
-
-# =========================================================
-# RESTAURANT CHATBOT - STREAMLIT APP
-# =========================================================
+import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Foodie AI Restaurant",
-    page_icon="🍴",
+    page_title="Snake Game",
+    page_icon="🐍",
     layout="centered"
 )
 
-# =========================================================
-# CSS
-# =========================================================
+st.markdown(
+    """
+    <style>
+        .main {
+            text-align: center;
+        }
 
-st.markdown("""
+        h1 {
+            text-align: center;
+        }
+
+        .game-info {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.title("🐍 Snake Game")
+
+st.markdown(
+    '<div class="game-info">Use Arrow Keys or WASD to move the snake</div>',
+    unsafe_allow_html=True
+)
+
+game_html = """
+<!DOCTYPE html>
+<html>
+<head>
+
 <style>
 
-* {
-    box-sizing: border-box;
+body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    font-family: Arial, sans-serif;
+    text-align: center;
 }
 
-.stApp {
-    background: linear-gradient(135deg, #ff512f, #dd2476);
+#gameContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
 }
 
-.main {
-    padding-top: 20px;
+canvas {
+    border: 4px solid #222;
+    background-color: #111;
+    border-radius: 10px;
 }
 
-.chat-container {
-    max-width: 500px;
-    margin: auto;
-    background: white;
-    border-radius: 25px;
-    overflow: hidden;
-    box-shadow: 0 15px 50px rgba(0,0,0,0.30);
-}
-
-.restaurant-header {
-    background: linear-gradient(135deg, #ff512f, #dd2476);
-    color: white;
-    padding: 25px;
-    border-radius: 25px 25px 0 0;
-}
-
-.restaurant-title {
-    font-size: 28px;
+#score {
+    font-size: 22px;
     font-weight: bold;
+    margin: 10px;
 }
 
-.restaurant-subtitle {
-    font-size: 14px;
-    margin-top: 5px;
-}
-
-.online {
-    float: right;
-    margin-top: -35px;
-    font-size: 13px;
-}
-
-.chat-area {
-    background: #f8f8f8;
-    padding: 20px;
-    min-height: 450px;
-}
-
-.bot-message {
-    background: #eeeeee;
-    color: #222222;
-    padding: 14px 17px;
-    border-radius: 18px;
-    border-bottom-left-radius: 5px;
-    margin-bottom: 15px;
-    max-width: 85%;
-    line-height: 1.5;
-}
-
-.user-message {
-    background: #ff512f;
-    color: white;
-    padding: 14px 17px;
-    border-radius: 18px;
-    border-bottom-right-radius: 5px;
-    margin-bottom: 15px;
-    margin-left: auto;
-    max-width: 85%;
-    line-height: 1.5;
-}
-
-.quick-title {
+#message {
+    font-size: 20px;
     font-weight: bold;
-    margin-bottom: 8px;
+    margin: 10px;
 }
 
-div.stButton > button {
-    border-radius: 20px;
+button {
+    padding: 10px 25px;
+    font-size: 17px;
     border: none;
-    background: #fff0eb;
-    color: #e64120;
-    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #2196F3;
+    color: white;
 }
 
-div.stButton > button:hover {
-    background: #ff512f;
-    color: white;
+button:hover {
+    background-color: #1976D2;
 }
 
 </style>
-""", unsafe_allow_html=True)
 
+</head>
 
-# =========================================================
-# RESTAURANT MENU
-# =========================================================
+<body>
 
-MENU = {
-    "pizza": [
-        ("Margherita Pizza", 250),
-        ("Paneer Pizza", 320),
-        ("Chicken Pizza", 350),
-    ],
+<div id="gameContainer">
 
-    "biryani": [
-        ("Veg Biryani", 180),
-        ("Chicken Biryani", 250),
-        ("Mutton Biryani", 320),
-    ],
+<div id="score">
+    Score: <span id="scoreValue">0</span>
+</div>
 
-    "starters": [
-        ("Paneer Tikka", 220),
-        ("Chicken 65", 240),
-        ("Gobi Manchurian", 180),
-    ],
+<canvas id="gameCanvas" width="500" height="500"></canvas>
+
+<div id="message">
+    Press Arrow Keys or WASD to start
+</div>
+
+<button onclick="restartGame()">🔄 Restart Game</button>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const gridSize = 25;
+const tileCount = canvas.width / gridSize;
+
+let snake;
+let food;
+
+let dx;
+let dy;
+
+let score;
+let gameRunning;
+let gameOver;
+
+let gameSpeed = 100;
+
+function initializeGame() {
+
+    snake = [
+        {x: 10, y: 10},
+        {x: 9, y: 10},
+        {x: 8, y: 10}
+    ];
+
+    food = {
+        x: Math.floor(Math.random() * tileCount),
+        y: Math.floor(Math.random() * tileCount)
+    };
+
+    dx = 0;
+    dy = 0;
+
+    score = 0;
+
+    gameRunning = false;
+    gameOver = false;
+
+    document.getElementById("scoreValue").innerText = score;
+
+    document.getElementById("message").innerText =
+        "Press Arrow Keys or WASD to start";
+
+    drawGame();
 }
 
+function drawGame() {
 
-# =========================================================
-# BOT RESPONSE
-# =========================================================
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-def get_bot_response(message):
+    // Draw grid
 
-    text = message.lower().strip()
+    ctx.strokeStyle = "#222";
 
-    # ---------------- HELLO ----------------
+    for (let x = 0; x <= canvas.width; x += gridSize) {
 
-    if any(word in text for word in ["hello", "hi", "hey"]):
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
 
-        return """
-        👋 Hello!
+    }
 
-        Welcome to <b>Foodie Restaurant</b>.
+    for (let y = 0; y <= canvas.height; y += gridSize) {
 
-        How can I help you today? 🍴
-        """
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
 
+    }
 
-    # ---------------- MENU ----------------
+    // Draw food
 
-    if "menu" in text or "food" in text:
+    ctx.fillStyle = "red";
 
-        return """
-        <b>🍴 Our Menu</b>
+    ctx.beginPath();
 
-        <br><br>
+    ctx.arc(
+        food.x * gridSize + gridSize / 2,
+        food.y * gridSize + gridSize / 2,
+        gridSize / 2 - 3,
+        0,
+        Math.PI * 2
+    );
 
-        🍕 <b>Pizza</b>
+    ctx.fill();
 
-        <br>
-        Margherita Pizza - ₹250
+    // Draw snake
 
-        <br>
-        Paneer Pizza - ₹320
+    snake.forEach((segment, index) => {
 
-        <br>
-        Chicken Pizza - ₹350
+        if (index === 0) {
+            ctx.fillStyle = "#00FF00";
+        } else {
+            ctx.fillStyle = "#32CD32";
+        }
 
+        ctx.fillRect(
+            segment.x * gridSize + 2,
+            segment.y * gridSize + 2,
+            gridSize - 4,
+            gridSize - 4
+        );
 
-        <br><br>
+    });
 
-        🍚 <b>Biryani</b>
+}
 
-        <br>
-        Veg Biryani - ₹180
+function moveSnake() {
 
-        <br>
-        Chicken Biryani - ₹250
+    if (!gameRunning || gameOver) {
+        return;
+    }
 
-        <br>
-        Mutton Biryani - ₹320
+    const head = {
+        x: snake[0].x + dx,
+        y: snake[0].y + dy
+    };
 
-
-        <br><br>
-
-        🥘 <b>Starters</b>
-
-        <br>
-        Paneer Tikka - ₹220
-
-        <br>
-        Chicken 65 - ₹240
-
-        <br>
-        Gobi Manchurian - ₹180
-        """
-
-
-    # ---------------- VEG ----------------
-
-    if "veg" in text or "vegetarian" in text:
-
-        return """
-        🥗 <b>Vegetarian Menu</b>
-
-        <br><br>
-
-        🍕 Margherita Pizza - ₹250
-
-        <br>
-        🍕 Paneer Pizza - ₹320
-
-        <br>
-        🍚 Veg Biryani - ₹180
-
-        <br>
-        🧀 Paneer Tikka - ₹220
-
-        <br>
-        🥦 Gobi Manchurian - ₹180
-        """
-
-
-    # ---------------- NON VEG ----------------
+    // Wall collision
 
     if (
-        "non veg" in text
-        or "non-veg" in text
-        or "chicken" in text
-        or "mutton" in text
-    ):
+        head.x < 0 ||
+        head.x >= tileCount ||
+        head.y < 0 ||
+        head.y >= tileCount
+    ) {
 
-        return """
-        🍗 <b>Non-Vegetarian Menu</b>
+        endGame();
+        return;
+    }
 
-        <br><br>
+    // Snake collision
 
-        🍕 Chicken Pizza - ₹350
+    for (let i = 0; i < snake.length; i++) {
 
-        <br>
-        🍚 Chicken Biryani - ₹250
+        if (
+            head.x === snake[i].x &&
+            head.y === snake[i].y
+        ) {
 
-        <br>
-        🍚 Mutton Biryani - ₹320
+            endGame();
+            return;
+        }
+    }
 
-        <br>
-        🍗 Chicken 65 - ₹240
-        """
+    snake.unshift(head);
 
-
-    # ---------------- PRICE ----------------
-
-    if (
-        "price" in text
-        or "cost" in text
-        or "how much" in text
-    ):
-
-        return """
-        💰 Our food prices start from <b>₹180</b>.
-
-        <br><br>
-
-        Tell me the dish name and I can show you the price.
-        """
-
-
-    # ---------------- BOOKING ----------------
+    // Food collision
 
     if (
-        "book" in text
-        or "booking" in text
-        or "reservation" in text
-        or "table" in text
-    ):
+        head.x === food.x &&
+        head.y === food.y
+    ) {
 
-        return """
-        📅 <b>Table Reservation</b>
+        score += 10;
 
-        <br><br>
+        document.getElementById("scoreValue").innerText = score;
 
-        I can help you reserve a table.
+        generateFood();
 
-        <br><br>
+    } else {
 
-        Please provide:
+        snake.pop();
 
-        <br>👥 Number of people
-        <br>📅 Date
-        <br>⏰ Time
+    }
 
-        <br><br>
+    drawGame();
+}
 
-        Example:
+function generateFood() {
 
-        <br>
-        <i>4 people, August 30, 7:30 PM</i>
-        """
+    let validPosition = false;
 
+    while (!validPosition) {
 
-    # ---------------- LOCATION ----------------
+        food.x = Math.floor(Math.random() * tileCount);
+        food.y = Math.floor(Math.random() * tileCount);
 
-    if (
-        "location" in text
-        or "address" in text
-        or "where" in text
-    ):
+        validPosition = true;
 
-        return """
-        📍 <b>Foodie Restaurant</b>
+        for (let segment of snake) {
 
-        <br><br>
+            if (
+                segment.x === food.x &&
+                segment.y === food.y
+            ) {
 
-        Chennai, Tamil Nadu
+                validPosition = false;
+                break;
 
-        <br><br>
+            }
 
-        🕐 <b>Opening Hours</b>
+        }
+    }
+}
 
-        <br>
-        10:00 AM - 11:00 PM
-        """
+function endGame() {
 
+    gameRunning = false;
+    gameOver = true;
 
-    # ---------------- HOURS ----------------
+    document.getElementById("message").innerText =
+        "💥 Game Over! Your Score: " + score;
 
-    if (
-        "open" in text
-        or "timing" in text
-        or "hours" in text
-    ):
+    drawGame();
+}
 
-        return """
-        🕐 <b>Restaurant Hours</b>
+function restartGame() {
 
-        <br><br>
+    initializeGame();
 
-        Monday - Sunday
+}
 
-        <br>
-        10:00 AM - 11:00 PM
-        """
+function changeDirection(newDx, newDy) {
 
+    // Prevent snake from moving directly backwards
 
-    # ---------------- THANK YOU ----------------
+    if (dx === -newDx && dy === -newDy) {
+        return;
+    }
 
-    if "thank" in text:
+    dx = newDx;
+    dy = newDy;
 
-        return """
-        😊 You're welcome!
+    gameRunning = true;
 
-        <br><br>
+    document.getElementById("message").innerText =
+        "Game Running 🐍";
+}
 
-        Thank you for choosing
-        <b>Foodie Restaurant</b>! 🍴
-        """
+document.addEventListener("keydown", function(event) {
 
+    const key = event.key.toLowerCase();
 
-    # ---------------- DEFAULT ----------------
+    if (key === "arrowup" || key === "w") {
 
-    return """
-    🤖 I'm your Foodie Restaurant Assistant.
+        changeDirection(0, -1);
 
-    <br><br>
+    }
 
-    I can help you with:
+    else if (key === "arrowdown" || key === "s") {
 
-    <br>🍴 Menu
-    <br>🥗 Vegetarian food
-    <br>🍗 Non-vegetarian food
-    <br>💰 Prices
-    <br>📅 Table booking
-    <br>📍 Location
-    <br>🕐 Opening hours
+        changeDirection(0, 1);
 
-    <br><br>
+    }
 
-    Try asking:
+    else if (key === "arrowleft" || key === "a") {
 
-    <br>
-    <i>"Show me the menu"</i>
+        changeDirection(-1, 0);
+
+    }
+
+    else if (key === "arrowright" || key === "d") {
+
+        changeDirection(1, 0);
+
+    }
+
+});
+
+initializeGame();
+
+setInterval(moveSnake, gameSpeed);
+
+</script>
+
+</body>
+</html>
+"""
+
+components.html(
+    game_html,
+    height=650,
+    scrolling=False
+)
+
+st.markdown("---")
+
+st.markdown(
     """
+    ### 🎮 Controls
 
+    | Key | Movement |
+    |---|---|
+    | ⬆️ / W | Up |
+    | ⬇️ / S | Down |
+    | ⬅️ / A | Left |
+    | ➡️ / D | Right |
 
-# =========================================================
-# HEADER
-# =========================================================
-
-st.markdown("""
-<div class="chat-container">
-
-<div class="restaurant-header">
-
-<div class="restaurant-title">
-🍴 Foodie AI
-</div>
-
-<div class="restaurant-subtitle">
-Restaurant Assistant
-</div>
-
-<div class="online">
-🟢 Online
-</div>
-
-</div>
-
-</div>
-""", unsafe_allow_html=True)
-
-
-# =========================================================
-# CHAT HISTORY
-# =========================================================
-
-if "messages" not in st.session_state:
-
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": """
-            👋 Hello! Welcome to <b>Foodie Restaurant</b>.
-
-            <br><br>
-
-            I can help you with:
-
-            <br>🍴 Menu
-            <br>🥗 Vegetarian food
-            <br>🍗 Non-vegetarian food
-            <br>💰 Prices
-            <br>📅 Table booking
-            <br>📍 Location
-            """
-        }
-    ]
-
-
-# =========================================================
-# CHAT DISPLAY
-# =========================================================
-
-st.markdown(
-    '<div class="chat-area">',
-    unsafe_allow_html=True
+    **🍎 Red = Food**  
+    **🐍 Green = Snake**  
+    **💥 Hit the wall or yourself = Game Over**
+    """
 )
-
-
-for message in st.session_state.messages:
-
-    if message["role"] == "user":
-
-        st.markdown(
-            f"""
-            <div class="user-message">
-            {message["content"]}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    else:
-
-        st.markdown(
-            f"""
-            <div class="bot-message">
-            {message["content"]}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-st.markdown(
-    '</div>',
-    unsafe_allow_html=True
-)
-
-
-# =========================================================
-# QUICK BUTTONS
-# =========================================================
-
-st.markdown("### Quick Questions")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-
-    if st.button("🍴 Menu", use_container_width=True):
-
-        st.session_state.messages.append(
-            {
-                "role": "user",
-                "content": "Show me the menu"
-            }
-        )
-
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": get_bot_response("Show me the menu")
-            }
-        )
-
-        st.rerun()
-
-
-with col2:
-
-    if st.button("🥗 Veg", use_container_width=True):
-
-        st.session_state.messages.append(
-            {
-                "role": "user",
-                "content": "Show vegetarian food"
-            }
-        )
-
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": get_bot_response(
-                    "Show vegetarian food"
-                )
-            }
-        )
-
-        st.rerun()
-
-
-with col3:
-
-    if st.button("📅 Booking", use_container_width=True):
-
-        st.session_state.messages.append(
-            {
-                "role": "user",
-                "content": "I want to book a table"
-            }
-        )
-
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": get_bot_response(
-                    "I want to book a table"
-                )
-            }
-        )
-
-        st.rerun()
-
-
-# =========================================================
-# CHAT INPUT
-# =========================================================
-
-user_input = st.chat_input(
-    "Ask about menu, food, price, booking..."
-)
-
-
-if user_input:
-
-    # User message
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": user_input
-        }
-    )
-
-    # Bot message
-    response = get_bot_response(user_input)
-
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": response
-        }
-    )
-
-    st.rerun()
