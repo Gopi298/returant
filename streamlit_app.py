@@ -35,9 +35,9 @@ st.write(
 )
 
 st.warning(
-    "This application provides educational clinical guidance only. "
-    "It does not prescribe medication or insulin. "
-    "Treatment decisions must be made by a qualified healthcare professional."
+    "Physician clinical decision-support tool. "
+    "Treatment and medication decisions must be confirmed "
+    "by a qualified healthcare professional."
 )
 
 st.divider()
@@ -219,9 +219,8 @@ if st.button(
         )
 
         st.write(
-            "This may represent hypoglycemia. "
-            "Immediate clinical assessment may be required, "
-            "especially if the patient has symptoms."
+            "Possible hypoglycemia. Clinical assessment is "
+            "recommended, especially when symptoms are present."
         )
 
     elif glucose < 126:
@@ -233,10 +232,9 @@ if st.button(
         )
 
         st.write(
-            "This value is below the diagnostic fasting "
-            "diabetes threshold. Clinical interpretation "
-            "depends on whether the measurement was fasting "
-            "or taken after eating."
+            "This value is below the diagnostic fasting diabetes "
+            "threshold. Interpretation depends on whether the "
+            "measurement was fasting or after eating."
         )
 
     elif glucose < 200:
@@ -248,8 +246,8 @@ if st.button(
         )
 
         st.write(
-            "Further evaluation with appropriate glucose "
-            "testing and/or HbA1c may be required."
+            "Further evaluation with appropriate glucose testing "
+            "and/or HbA1c may be required."
         )
 
     elif glucose < 300:
@@ -262,9 +260,8 @@ if st.button(
 
         st.write(
             "High glucose requires clinical evaluation. "
-            "Treatment depends on diabetes type, HbA1c, "
-            "symptoms, kidney function, cardiovascular "
-            "risk and other patient-specific factors."
+            "Treatment depends on diabetes type, HbA1c, kidney "
+            "function, cardiovascular risk and other factors."
         )
 
     else:
@@ -276,10 +273,29 @@ if st.button(
         )
 
         st.write(
-            "Blood glucose ≥300 mg/dL is a level at which "
-            "insulin should be considered, particularly "
-            "when hyperglycemic symptoms are present. "
-            "This requires prompt medical evaluation."
+            "Very high glucose requires prompt clinical evaluation."
+        )
+
+    # ========================================================
+    # SIMPLE DIABETES STATUS IMAGE
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("🩺 Diabetes Status")
+
+    if prediction == 1:
+
+        st.image(
+            "https://cdn-icons-png.flaticon.com/512/2966/2966327.png",
+            width=120
+        )
+
+    else:
+
+        st.image(
+            "https://cdn-icons-png.flaticon.com/512/190/190411.png",
+            width=120
         )
 
     # ========================================================
@@ -288,121 +304,296 @@ if st.button(
 
     st.divider()
 
-    st.subheader("💊 Treatment Guidance")
+    st.subheader("💊 Physician Treatment Guidance")
+
+    # ========================================================
+    # LOW GLUCOSE
+    # ========================================================
 
     if glucose < 70:
 
         st.error(
-            "Possible hypoglycemia"
+            "🔴 LOW GLUCOSE – HYPOGLYCEMIA ASSESSMENT"
         )
 
         st.write(
-            "Do not automatically start diabetes medication "
-            "based on this value. The cause of the low glucose "
-            "should be evaluated."
+            "Medication should not be automatically increased or "
+            "started from this glucose value."
         )
 
         st.write(
-            "If the patient is taking insulin or glucose-lowering "
-            "medication, a healthcare professional should review "
-            "the treatment."
+            "Physician should review current insulin and "
+            "glucose-lowering medications and evaluate the "
+            "cause of hypoglycemia."
         )
+
+        st.write(
+            "If the patient is conscious and able to swallow, "
+            "follow the established hypoglycemia treatment protocol."
+        )
+
+        st.write(
+            "🚶 Physical exercise should be avoided until the "
+            "low glucose episode has been appropriately addressed."
+        )
+
+    # ========================================================
+    # BELOW DIABETES THRESHOLD
+    # ========================================================
 
     elif glucose < 126:
 
         st.success(
-            "Lifestyle and monitoring category"
+            "🟢 NO AUTOMATIC MEDICATION INDICATION FROM THIS VALUE"
         )
 
         st.write(
-            "Depending on the patient's diagnosis and risk factors, "
-            "focus may include healthy nutrition, physical activity, "
-            "weight management and regular glucose monitoring."
+            "If diabetes has not been diagnosed, medication is not "
+            "automatically indicated from this single glucose value."
         )
 
         st.write(
-            "Medication is not automatically indicated from this "
-            "single glucose value."
+            "Physician may consider HbA1c, repeat fasting glucose "
+            "and overall diabetes risk."
         )
+
+        st.write(
+            "🚶 Lifestyle recommendation: regular walking/physical "
+            "activity, healthy diet and weight management when "
+            "clinically appropriate."
+        )
+
+        if prediction == 0:
+
+            st.info(
+                "✅ No diabetes risk predicted by the ML model. "
+                "No diabetes medication is automatically recommended "
+                "by this application."
+            )
+
+    # ========================================================
+    # ELEVATED GLUCOSE
+    # ========================================================
 
     elif glucose < 200:
 
         st.warning(
-            "Clinical evaluation category"
+            "🟡 ELEVATED GLUCOSE – PHYSICIAN REVIEW"
         )
 
         st.write(
-            "A healthcare professional may evaluate HbA1c, fasting "
-            "glucose and other clinical factors before selecting "
-            "a treatment plan."
+            "Recommended clinical review may include HbA1c, fasting "
+            "glucose, repeat testing and assessment of diabetes risk."
         )
 
         st.write(
-            "For type 2 diabetes, medication selection is individualized."
+            "Possible medication consideration for confirmed "
+            "type 2 diabetes:"
         )
+
+        st.write(
+            "💊 Metformin – commonly considered as a glucose-lowering "
+            "option when clinically appropriate."
+        )
+
+        st.write(
+            "💊 Other options may include GLP-1 receptor agonist-based "
+            "therapy, SGLT2 inhibitors or other glucose-lowering "
+            "medications depending on patient characteristics."
+        )
+
+        st.info(
+            "Dose, tablet strength and morning/evening timing must "
+            "be selected by the treating physician after reviewing "
+            "HbA1c, renal function, contraindications and current therapy."
+        )
+
+        st.write(
+            "🚶 Lifestyle: regular walking/physical activity and "
+            "appropriate nutrition should be considered."
+        )
+
+    # ========================================================
+    # HIGH GLUCOSE
+    # ========================================================
 
     elif glucose < 300:
 
         st.warning(
-            "High glucose – medical evaluation recommended"
+            "🟠 HIGH GLUCOSE – MEDICAL EVALUATION REQUIRED"
         )
 
         st.write(
-            "Treatment may involve lifestyle intervention plus "
-            "glucose-lowering medication depending on the confirmed "
-            "diagnosis and HbA1c."
+            "Confirmed diabetes should be evaluated with HbA1c and "
+            "other relevant clinical information."
         )
 
         st.write(
-            "Possible medication classes for type 2 diabetes include "
-            "metformin, GLP-1-based therapies, SGLT2 inhibitors and "
-            "other glucose-lowering medications. The appropriate "
-            "choice depends on the individual patient."
+            "Possible physician-selected treatment options include:"
         )
+
+        st.write(
+            "💊 Metformin – glucose-lowering medication option "
+            "when appropriate."
+        )
+
+        st.write(
+            "💊 GLP-1 receptor agonist-based therapy – may be "
+            "considered according to individual patient factors."
+        )
+
+        st.write(
+            "💊 SGLT2 inhibitor – may be considered when clinically "
+            "appropriate, particularly when cardiovascular or kidney "
+            "considerations support its use."
+        )
+
+        st.write(
+            "💊 Other diabetes medications may be selected according "
+            "to the patient's clinical condition."
+        )
+
+        st.info(
+            "Physician must determine the exact drug, strength, "
+            "dose and morning/evening administration schedule."
+        )
+
+        st.write(
+            "🚶 Physical activity should be individualized based "
+            "on glucose level, symptoms and clinical condition."
+        )
+
+    # ========================================================
+    # VERY HIGH GLUCOSE
+    # ========================================================
 
     else:
 
         st.error(
-            "Very high glucose – prompt medical evaluation"
+            "🔴 VERY HIGH GLUCOSE – PROMPT PHYSICIAN EVALUATION"
         )
 
         st.write(
-            "Blood glucose ≥300 mg/dL may indicate severe "
-            "hyperglycemia."
+            f"Current glucose: **{glucose} mg/dL**"
         )
 
         st.write(
-            "According to ADA 2026 guidance, insulin should be "
-            "considered when blood glucose is ≥300 mg/dL or A1C "
-            "is >10%, particularly when hyperglycemic symptoms "
+            "Very high glucose requires assessment for symptomatic "
+            "hyperglycemia and possible acute metabolic complications."
+        )
+
+        st.write(
+            "Possible physician treatment considerations may include:"
+        )
+
+        st.write(
+            "💉 Insulin therapy – may be considered when clinically "
+            "indicated. Insulin type, concentration, dose and timing "
+            "must be individually prescribed by the physician."
+        )
+
+        st.write(
+            "💊 Oral/non-insulin glucose-lowering medication may also "
+            "be considered depending on diabetes type and clinical status."
+        )
+
+        st.error(
+            "⚠️ This application does NOT calculate or recommend "
+            "an insulin dose in mg or units."
+        )
+
+        st.write(
+            "🚨 If high glucose is accompanied by vomiting, abdominal "
+            "pain, rapid/difficult breathing, confusion, severe "
+            "weakness or dehydration, urgent medical evaluation is required."
+        )
+
+        st.write(
+            "🚶 Do not use exercise as a substitute for medical "
+            "evaluation when severe hyperglycemia or acute symptoms "
             "are present."
         )
 
-        st.write(
-            "Do NOT calculate or administer an insulin dose from "
-            "this application. Insulin type and dose require "
-            "individual clinical assessment."
-        )
-
     # ========================================================
-    # DIABETES TYPE / MEDICATION NOTICE
+    # PHYSICIAN MEDICATION REVIEW
     # ========================================================
 
     st.divider()
 
-    st.subheader("📋 Medication Decision Factors")
+    st.subheader("👨‍⚕️ Physician Medication Review")
+
+    medication_options = [
+        "Metformin",
+        "GLP-1 receptor agonist-based therapy",
+        "SGLT2 inhibitor",
+        "DPP-4 inhibitor",
+        "Sulfonylurea",
+        "Insulin therapy when clinically indicated"
+    ]
 
     st.write(
-        "A clinician may consider the following before selecting "
-        "therapy:"
+        "Potential medication options for physician review:"
     )
+
+    for medication in medication_options:
+
+        st.write(
+            f"• {medication}"
+        )
+
+    st.info(
+        "Medication dose, mg/units, frequency and administration "
+        "time should be entered or confirmed by the treating physician. "
+        "Glucose level alone is insufficient to safely determine a "
+        "patient-specific prescription."
+    )
+
+    # ========================================================
+    # LIFESTYLE GUIDANCE
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("🚶 Lifestyle Guidance")
+
+    st.write(
+        "• Regular walking or physical activity when clinically appropriate"
+    )
+
+    st.write(
+        "• Reduce excess refined carbohydrates and added sugars"
+    )
+
+    st.write(
+        "• Follow an individualized balanced diet"
+    )
+
+    st.write(
+        "• Maintain a healthy body weight"
+    )
+
+    st.write(
+        "• Monitor glucose as advised by the healthcare professional"
+    )
+
+    st.write(
+        "• Complete recommended HbA1c and follow-up testing"
+    )
+
+    # ========================================================
+    # MEDICATION DECISION FACTORS
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("📋 Physician Decision Factors")
 
     factors = [
         "HbA1c level",
         "Fasting and post-meal glucose",
         "Diabetes type",
         "Age",
-        "Kidney function",
+        "Kidney function / eGFR",
         "Heart disease / cardiovascular risk",
         "Weight and obesity status",
         "Risk of hypoglycemia",
@@ -413,6 +604,7 @@ if st.button(
     ]
 
     for factor in factors:
+
         st.write(
             f"• {factor}"
         )
@@ -443,7 +635,8 @@ if st.button(
 st.divider()
 
 st.info(
-    "This application is an educational machine-learning project. "
-    "The model prediction is not a medical diagnosis and the "
-    "treatment guidance is not a prescription."
+    "This application is an educational machine-learning and "
+    "physician decision-support project. The model prediction is "
+    "not a medical diagnosis and medication guidance is not a "
+    "patient-specific prescription."
 )
