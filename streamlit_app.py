@@ -1,642 +1,206 @@
+"""
+==========================================================================
+ DIABETES RISK PREDICTOR - Streamlit App
+ Loads the pre-trained model (models/best_model.pkl) and scaler to
+ predict diabetes risk from user input. Ready for Streamlit Cloud.
+==========================================================================
+"""
+
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
+import json
+import plotly.graph_objects as go
 
-# ============================================================
-# PAGE CONFIGURATION
-# ============================================================
-
+# --------------------------------------------------------------------------
+# PAGE CONFIG
+# --------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Diabetes Prediction AI",
+    page_title="Diabetes Risk Predictor",
     page_icon="🩺",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# ============================================================
-# LOAD MODEL
-# ============================================================
-
+# --------------------------------------------------------------------------
+# LOAD MODEL, SCALER, METADATA  (cached so it only loads once)
+# --------------------------------------------------------------------------
 @st.cache_resource
-def load_model():
-    return joblib.load("diabetes_model.pkl")
+def load_artifacts():
+    model = joblib.load("models/best_model.pkl")
+    scaler = joblib.load("models/scaler.pkl")
+    with open("models/metadata.json") as f:
+        metadata = json.load(f)
+    return model, scaler, metadata
 
+model, scaler, metadata = load_artifacts()
+FEATURES = metadata["feature_names"]
 
-model = load_model()
+# --------------------------------------------------------------------------
+# STYLES
+# --------------------------------------------------------------------------
+st.markdown("""
+<style>
+    .main-header {font-size: 2.3rem; font-weight: 700; color: #1f4e79; margin-bottom: 0;}
+    .sub-header {color: #666; font-size: 1.05rem; margin-top: 0;}
+    .metric-card {background-color: #f0f4f8; padding: 1rem; border-radius: 10px; text-align:center;}
+    .risk-high {background-color: #ffe3e3; padding: 1.2rem; border-radius: 10px; border-left: 6px solid #c0392b;}
+    .risk-low  {background-color: #e3f9e5; padding: 1.2rem; border-radius: 10px; border-left: 6px solid #27ae60;}
+</style>
+""", unsafe_allow_html=True)
 
-# ============================================================
-# TITLE
-# ============================================================
+# --------------------------------------------------------------------------
+# SIDEBAR - PATIENT INPUT
+# --------------------------------------------------------------------------
+st.sidebar.header("🧾 Patient Data Input")
+st.sidebar.caption("Adjust the sliders to match the patient's measurements.")
 
-st.title("🩺 Diabetes Prediction & Treatment Guidance System")
+def user_input_form():
+    pregnancies = st.sidebar.slider("Pregnancies", 0, 17, 2)
+    glucose = st.sidebar.slider("Glucose (mg/dL)", 40, 200, 117)
+    blood_pressure = st.sidebar.slider("Blood Pressure (mm Hg)", 24, 130, 72)
+    skin_thickness = st.sidebar.slider("Skin Thickness (mm)", 7, 99, 23)
+    insulin = st.sidebar.slider("Insulin (mu U/ml)", 14, 850, 100)
+    bmi = st.sidebar.slider("BMI", 15.0, 67.0, 32.0, step=0.1)
+    dpf = st.sidebar.slider("Diabetes Pedigree Function", 0.05, 2.5, 0.37, step=0.01)
+    age = st.sidebar.slider("Age", 18, 90, 30)
 
-st.write(
-    "Machine Learning based diabetes risk prediction "
-    "using patient clinical information."
+    data = {
+        "Pregnancies": pregnancies,
+        "Glucose": glucose,
+        "BloodPressure": blood_pressure,
+        "SkinThickness": skin_thickness,
+        "Insulin": insulin,
+        "BMI": bmi,
+        "DiabetesPedigreeFunction": dpf,
+        "Age": age,
+    }
+    return pd.DataFrame([data])[FEATURES]
+
+input_df = user_input_form()
+
+# --------------------------------------------------------------------------
+# HEADER
+# --------------------------------------------------------------------------
+st.markdown('<p class="main-header">🩺 Diabetes Risk Predictor</p>', unsafe_allow_html=True)
+st.markdown(
+    f'<p class="sub-header">Powered by a tuned <b>{metadata["model_name"]}</b> model '
+    f'&nbsp;|&nbsp; Test Accuracy: <b>{metadata["test_accuracy"]*100:.1f}%</b> '
+    f'&nbsp;|&nbsp; ROC AUC: <b>{metadata["roc_auc"]:.3f}</b></p>',
+    unsafe_allow_html=True,
 )
-
-st.warning(
-    "Physician clinical decision-support tool. "
-    "Treatment and medication decisions must be confirmed "
-    "by a qualified healthcare professional."
-)
-
 st.divider()
 
-# ============================================================
-# SIDEBAR
-# ============================================================
-
-st.sidebar.header("Patient Information")
-
-pregnancies = st.sidebar.number_input(
-    "Pregnancies",
-    min_value=0,
-    max_value=20,
-    value=1,
-    step=1
-)
-
-glucose = st.sidebar.number_input(
-    "Glucose",
-    min_value=0,
-    max_value=500,
-    value=120,
-    step=1
-)
-
-blood_pressure = st.sidebar.number_input(
-    "Blood Pressure",
-    min_value=0,
-    max_value=200,
-    value=70,
-    step=1
-)
-
-skin_thickness = st.sidebar.number_input(
-    "Skin Thickness",
-    min_value=0,
-    max_value=100,
-    value=20,
-    step=1
-)
-
-insulin = st.sidebar.number_input(
-    "Insulin",
-    min_value=0,
-    max_value=1000,
-    value=80,
-    step=1
-)
-
-bmi = st.sidebar.number_input(
-    "BMI",
-    min_value=0.0,
-    max_value=80.0,
-    value=25.0,
-    step=0.1
-)
-
-diabetes_pedigree = st.sidebar.number_input(
-    "Diabetes Pedigree Function",
-    min_value=0.0,
-    max_value=3.0,
-    value=0.5,
-    step=0.01
-)
-
-age = st.sidebar.number_input(
-    "Age",
-    min_value=1,
-    max_value=120,
-    value=30,
-    step=1
-)
-
-# ============================================================
-# INPUT DATAFRAME
-# ============================================================
-
-input_data = pd.DataFrame({
-    "Pregnancies": [pregnancies],
-    "Glucose": [glucose],
-    "BloodPressure": [blood_pressure],
-    "SkinThickness": [skin_thickness],
-    "Insulin": [insulin],
-    "BMI": [bmi],
-    "DiabetesPedigreeFunction": [diabetes_pedigree],
-    "Age": [age]
-})
-
-# ============================================================
-# DISPLAY INPUT
-# ============================================================
-
-st.subheader("Patient Details")
-
-st.dataframe(
-    input_data,
-    use_container_width=True
-)
-
-# ============================================================
-# PREDICTION BUTTON
-# ============================================================
-
-if st.button(
-    "🔍 Predict Diabetes",
-    use_container_width=True
-):
-
-    prediction = model.predict(
-        input_data
-    )[0]
-
-    probability = model.predict_proba(
-        input_data
-    )[0][1]
-
-    probability_percent = probability * 100
-
-    st.divider()
-
-    st.subheader("Prediction Result")
-
-    # ========================================================
-    # RESULT
-    # ========================================================
-
-    if prediction == 1:
-
-        st.error(
-            "⚠️ Diabetes Risk Detected"
-        )
-
-        st.write(
-            f"Predicted diabetes probability: "
-            f"**{probability_percent:.2f}%**"
-        )
-
-    else:
-
-        st.success(
-            "✅ No Diabetes Risk Detected"
-        )
-
-        st.write(
-            f"Predicted diabetes probability: "
-            f"**{probability_percent:.2f}%**"
-        )
-
-    # ========================================================
-    # PROBABILITY BAR
-    # ========================================================
-
-    st.subheader("Prediction Probability")
-
-    st.progress(
-        int(probability_percent)
-    )
-
-    st.write(
-        f"Diabetes probability: "
-        f"{probability_percent:.2f}%"
-    )
-
-    # ========================================================
-    # GLUCOSE LEVEL CLASSIFICATION
-    # ========================================================
-
-    st.divider()
-
-    st.subheader("🩸 Glucose Level Assessment")
-
-    if glucose < 70:
-
-        glucose_category = "LOW"
-
-        st.error(
-            f"🔴 Low glucose: {glucose} mg/dL"
-        )
-
-        st.write(
-            "Possible hypoglycemia. Clinical assessment is "
-            "recommended, especially when symptoms are present."
-        )
-
-    elif glucose < 126:
-
-        glucose_category = "NORMAL / BELOW DIABETES THRESHOLD"
-
-        st.success(
-            f"🟢 Glucose level: {glucose} mg/dL"
-        )
-
-        st.write(
-            "This value is below the diagnostic fasting diabetes "
-            "threshold. Interpretation depends on whether the "
-            "measurement was fasting or after eating."
-        )
-
-    elif glucose < 200:
-
-        glucose_category = "ELEVATED"
-
-        st.warning(
-            f"🟡 Elevated glucose: {glucose} mg/dL"
-        )
-
-        st.write(
-            "Further evaluation with appropriate glucose testing "
-            "and/or HbA1c may be required."
-        )
-
-    elif glucose < 300:
-
-        glucose_category = "HIGH"
-
-        st.warning(
-            f"🟠 High glucose: {glucose} mg/dL"
-        )
-
-        st.write(
-            "High glucose requires clinical evaluation. "
-            "Treatment depends on diabetes type, HbA1c, kidney "
-            "function, cardiovascular risk and other factors."
-        )
-
-    else:
-
-        glucose_category = "VERY HIGH"
-
-        st.error(
-            f"🔴 Very high glucose: {glucose} mg/dL"
-        )
-
-        st.write(
-            "Very high glucose requires prompt clinical evaluation."
-        )
-
-    # ========================================================
-    # SIMPLE DIABETES STATUS IMAGE
-    # ========================================================
-
-    st.divider()
-
-    st.subheader("🩺 Diabetes Status")
-
-    if prediction == 1:
-
-        st.image(
-            "https://cdn-icons-png.flaticon.com/512/2966/2966327.png",
-            width=120
-        )
-
-    else:
-
-        st.image(
-            "https://cdn-icons-png.flaticon.com/512/190/190411.png",
-            width=120
-        )
-
-    # ========================================================
-    # TREATMENT GUIDANCE
-    # ========================================================
-
-    st.divider()
-
-    st.subheader("💊 Physician Treatment Guidance")
-
-    # ========================================================
-    # LOW GLUCOSE
-    # ========================================================
-
-    if glucose < 70:
-
-        st.error(
-            "🔴 LOW GLUCOSE – HYPOGLYCEMIA ASSESSMENT"
-        )
-
-        st.write(
-            "Medication should not be automatically increased or "
-            "started from this glucose value."
-        )
-
-        st.write(
-            "Physician should review current insulin and "
-            "glucose-lowering medications and evaluate the "
-            "cause of hypoglycemia."
-        )
-
-        st.write(
-            "If the patient is conscious and able to swallow, "
-            "follow the established hypoglycemia treatment protocol."
-        )
-
-        st.write(
-            "🚶 Physical exercise should be avoided until the "
-            "low glucose episode has been appropriately addressed."
-        )
-
-    # ========================================================
-    # BELOW DIABETES THRESHOLD
-    # ========================================================
-
-    elif glucose < 126:
-
-        st.success(
-            "🟢 NO AUTOMATIC MEDICATION INDICATION FROM THIS VALUE"
-        )
-
-        st.write(
-            "If diabetes has not been diagnosed, medication is not "
-            "automatically indicated from this single glucose value."
-        )
-
-        st.write(
-            "Physician may consider HbA1c, repeat fasting glucose "
-            "and overall diabetes risk."
-        )
-
-        st.write(
-            "🚶 Lifestyle recommendation: regular walking/physical "
-            "activity, healthy diet and weight management when "
-            "clinically appropriate."
-        )
-
-        if prediction == 0:
-
-            st.info(
-                "✅ No diabetes risk predicted by the ML model. "
-                "No diabetes medication is automatically recommended "
-                "by this application."
+tab1, tab2, tab3 = st.tabs(["🔮 Prediction", "📊 Patient Data", "📈 Model Info"])
+
+# --------------------------------------------------------------------------
+# TAB 1: PREDICTION
+# --------------------------------------------------------------------------
+with tab1:
+    col1, col2 = st.columns([1, 1.3])
+
+    input_scaled = scaler.transform(input_df)
+    prediction = model.predict(input_scaled)[0]
+    proba = model.predict_proba(input_scaled)[0]
+    risk_pct = proba[1] * 100
+
+    with col1:
+        st.subheader("Result")
+        if prediction == 1:
+            st.markdown(
+                f'<div class="risk-high"><h3>⚠️ High Risk of Diabetes</h3>'
+                f'<p>Estimated probability: <b>{risk_pct:.1f}%</b></p></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div class="risk-low"><h3>✅ Low Risk of Diabetes</h3>'
+                f'<p>Estimated probability: <b>{risk_pct:.1f}%</b></p></div>',
+                unsafe_allow_html=True,
             )
 
-    # ========================================================
-    # ELEVATED GLUCOSE
-    # ========================================================
-
-    elif glucose < 200:
-
-        st.warning(
-            "🟡 ELEVATED GLUCOSE – PHYSICIAN REVIEW"
+        st.caption(
+            "⚠️ This tool is for educational purposes only and is **not** a medical "
+            "diagnosis. Please consult a healthcare professional for medical advice."
         )
 
-        st.write(
-            "Recommended clinical review may include HbA1c, fasting "
-            "glucose, repeat testing and assessment of diabetes risk."
-        )
-
-        st.write(
-            "Possible medication consideration for confirmed "
-            "type 2 diabetes:"
-        )
-
-        st.write(
-            "💊 Metformin – commonly considered as a glucose-lowering "
-            "option when clinically appropriate."
-        )
-
-        st.write(
-            "💊 Other options may include GLP-1 receptor agonist-based "
-            "therapy, SGLT2 inhibitors or other glucose-lowering "
-            "medications depending on patient characteristics."
-        )
-
-        st.info(
-            "Dose, tablet strength and morning/evening timing must "
-            "be selected by the treating physician after reviewing "
-            "HbA1c, renal function, contraindications and current therapy."
-        )
-
-        st.write(
-            "🚶 Lifestyle: regular walking/physical activity and "
-            "appropriate nutrition should be considered."
-        )
-
-    # ========================================================
-    # HIGH GLUCOSE
-    # ========================================================
-
-    elif glucose < 300:
-
-        st.warning(
-            "🟠 HIGH GLUCOSE – MEDICAL EVALUATION REQUIRED"
-        )
-
-        st.write(
-            "Confirmed diabetes should be evaluated with HbA1c and "
-            "other relevant clinical information."
-        )
-
-        st.write(
-            "Possible physician-selected treatment options include:"
-        )
-
-        st.write(
-            "💊 Metformin – glucose-lowering medication option "
-            "when appropriate."
-        )
-
-        st.write(
-            "💊 GLP-1 receptor agonist-based therapy – may be "
-            "considered according to individual patient factors."
-        )
-
-        st.write(
-            "💊 SGLT2 inhibitor – may be considered when clinically "
-            "appropriate, particularly when cardiovascular or kidney "
-            "considerations support its use."
-        )
-
-        st.write(
-            "💊 Other diabetes medications may be selected according "
-            "to the patient's clinical condition."
-        )
-
-        st.info(
-            "Physician must determine the exact drug, strength, "
-            "dose and morning/evening administration schedule."
-        )
-
-        st.write(
-            "🚶 Physical activity should be individualized based "
-            "on glucose level, symptoms and clinical condition."
-        )
-
-    # ========================================================
-    # VERY HIGH GLUCOSE
-    # ========================================================
-
-    else:
-
-        st.error(
-            "🔴 VERY HIGH GLUCOSE – PROMPT PHYSICIAN EVALUATION"
-        )
-
-        st.write(
-            f"Current glucose: **{glucose} mg/dL**"
-        )
-
-        st.write(
-            "Very high glucose requires assessment for symptomatic "
-            "hyperglycemia and possible acute metabolic complications."
-        )
-
-        st.write(
-            "Possible physician treatment considerations may include:"
-        )
-
-        st.write(
-            "💉 Insulin therapy – may be considered when clinically "
-            "indicated. Insulin type, concentration, dose and timing "
-            "must be individually prescribed by the physician."
-        )
-
-        st.write(
-            "💊 Oral/non-insulin glucose-lowering medication may also "
-            "be considered depending on diabetes type and clinical status."
-        )
-
-        st.error(
-            "⚠️ This application does NOT calculate or recommend "
-            "an insulin dose in mg or units."
-        )
-
-        st.write(
-            "🚨 If high glucose is accompanied by vomiting, abdominal "
-            "pain, rapid/difficult breathing, confusion, severe "
-            "weakness or dehydration, urgent medical evaluation is required."
-        )
-
-        st.write(
-            "🚶 Do not use exercise as a substitute for medical "
-            "evaluation when severe hyperglycemia or acute symptoms "
-            "are present."
-        )
-
-    # ========================================================
-    # PHYSICIAN MEDICATION REVIEW
-    # ========================================================
+    with col2:
+        # Gauge chart for probability
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=risk_pct,
+            title={"text": "Diabetes Risk (%)"},
+            gauge={
+                "axis": {"range": [0, 100]},
+                "bar": {"color": "#1f4e79"},
+                "steps": [
+                    {"range": [0, 30], "color": "#d4f4dd"},
+                    {"range": [30, 60], "color": "#fff3cd"},
+                    {"range": [60, 100], "color": "#f8d7da"},
+                ],
+                "threshold": {"line": {"color": "red", "width": 4}, "value": 50},
+            },
+        ))
+        fig.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20))
+        st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
+    st.subheader("Input Summary")
+    st.dataframe(input_df.style.format(precision=2), use_container_width=True)
 
-    st.subheader("👨‍⚕️ Physician Medication Review")
+# --------------------------------------------------------------------------
+# TAB 2: PATIENT DATA VISUALS (compare patient vs population)
+# --------------------------------------------------------------------------
+with tab2:
+    st.subheader("How does this patient compare to the training population?")
+    ranges = metadata["feature_ranges"]
 
-    medication_options = [
-        "Metformin",
-        "GLP-1 receptor agonist-based therapy",
-        "SGLT2 inhibitor",
-        "DPP-4 inhibitor",
-        "Sulfonylurea",
-        "Insulin therapy when clinically indicated"
-    ]
+    cols = st.columns(4)
+    for i, feat in enumerate(FEATURES):
+        lo, hi = ranges[feat]
+        val = input_df[feat].values[0]
+        pct = (val - lo) / (hi - lo) * 100 if hi > lo else 50
+        with cols[i % 4]:
+            st.metric(feat, f"{val:.1f}")
+            st.progress(min(max(pct / 100, 0), 1.0))
 
-    st.write(
-        "Potential medication options for physician review:"
-    )
-
-    for medication in medication_options:
-
-        st.write(
-            f"• {medication}"
-        )
+# --------------------------------------------------------------------------
+# TAB 3: MODEL INFO
+# --------------------------------------------------------------------------
+with tab3:
+    st.subheader("Model Performance")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Model", metadata["model_name"])
+    c2.metric("Test Accuracy", f"{metadata['test_accuracy']*100:.1f}%")
+    c3.metric("CV Accuracy", f"{metadata['cv_accuracy_mean']*100:.1f}%")
+    c4.metric("ROC AUC", f"{metadata['roc_auc']:.3f}")
 
     st.info(
-        "Medication dose, mg/units, frequency and administration "
-        "time should be entered or confirmed by the treating physician. "
-        "Glucose level alone is insufficient to safely determine a "
-        "patient-specific prescription."
+        f"**Overfitting check:** Train/Test accuracy gap = "
+        f"**{metadata['overfit_gap']*100:.1f} points** "
+        f"({'looks healthy ✅' if metadata['overfit_gap'] < 0.10 else 'watch for overfitting ⚠️'})"
     )
 
-    # ========================================================
-    # LIFESTYLE GUIDANCE
-    # ========================================================
-
-    st.divider()
-
-    st.subheader("🚶 Lifestyle Guidance")
-
-    st.write(
-        "• Regular walking or physical activity when clinically appropriate"
+    st.caption(
+        "This model was trained and selected from 7-8 candidate algorithms "
+        "(Logistic Regression, Decision Tree, Random Forest, Gradient Boosting, "
+        "SVM, KNN, Naive Bayes, XGBoost) using 5-fold cross-validation, with the "
+        "final choice balancing accuracy and overfit gap, then hyperparameter-tuned."
     )
 
-    st.write(
-        "• Reduce excess refined carbohydrates and added sugars"
-    )
-
-    st.write(
-        "• Follow an individualized balanced diet"
-    )
-
-    st.write(
-        "• Maintain a healthy body weight"
-    )
-
-    st.write(
-        "• Monitor glucose as advised by the healthcare professional"
-    )
-
-    st.write(
-        "• Complete recommended HbA1c and follow-up testing"
-    )
-
-    # ========================================================
-    # MEDICATION DECISION FACTORS
-    # ========================================================
-
-    st.divider()
-
-    st.subheader("📋 Physician Decision Factors")
-
-    factors = [
-        "HbA1c level",
-        "Fasting and post-meal glucose",
-        "Diabetes type",
-        "Age",
-        "Kidney function / eGFR",
-        "Heart disease / cardiovascular risk",
-        "Weight and obesity status",
-        "Risk of hypoglycemia",
-        "Current medications",
-        "Pregnancy status",
-        "Diabetes symptoms",
-        "Duration of diabetes"
-    ]
-
-    for factor in factors:
-
-        st.write(
-            f"• {factor}"
-        )
-
-    # ========================================================
-    # EMERGENCY WARNING
-    # ========================================================
-
-    if glucose >= 300:
-
-        st.divider()
-
-        st.error(
-            "🚨 HIGH-RISK WARNING"
-        )
-
-        st.write(
-            "If very high glucose is accompanied by vomiting, "
-            "difficulty breathing, confusion, severe weakness, "
-            "dehydration or other severe symptoms, seek urgent "
-            "medical care."
-        )
-
-# ============================================================
-# INFORMATION
-# ============================================================
+    if hasattr(model, "feature_importances_"):
+        st.subheader("Feature Importance")
+        imp_df = pd.DataFrame({
+            "Feature": FEATURES,
+            "Importance": model.feature_importances_
+        }).sort_values("Importance", ascending=True)
+        fig2 = go.Figure(go.Bar(
+            x=imp_df["Importance"], y=imp_df["Feature"], orientation="h",
+            marker_color="#1f4e79"
+        ))
+        fig2.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10))
+        st.plotly_chart(fig2, use_container_width=True)
 
 st.divider()
-
-st.info(
-    "This application is an educational machine-learning and "
-    "physician decision-support project. The model prediction is "
-    "not a medical diagnosis and medication guidance is not a "
-    "patient-specific prescription."
-)
+st.caption("Built with Streamlit · scikit-learn · Random Forest classifier trained on the Pima Indians Diabetes dataset.")
