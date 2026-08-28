@@ -1,162 +1,209 @@
 import streamlit as st
+import pandas as pd
+import joblib
 
-# --------------------------------------------------
+# ============================================================
 # PAGE CONFIGURATION
-# --------------------------------------------------
+# ============================================================
 
 st.set_page_config(
-    page_title="Login System",
-    page_icon="🔐",
-    layout="centered"
+    page_title="Diabetes Prediction AI",
+    page_icon="🩺",
+    layout="wide"
 )
 
-# --------------------------------------------------
-# CUSTOM CSS
-# --------------------------------------------------
+# ============================================================
+# LOAD MODEL
+# ============================================================
 
-st.markdown("""
-<style>
+@st.cache_resource
+def load_model():
+    return joblib.load("diabetes_model.pkl")
 
-.login-container {
-    max-width: 450px;
-    margin: auto;
-    padding: 30px;
-}
 
-.title {
-    text-align: center;
-    font-size: 35px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
+model = load_model()
 
-.subtitle {
-    text-align: center;
-    color: gray;
-    margin-bottom: 30px;
-}
+# ============================================================
+# TITLE
+# ============================================================
 
-</style>
-""", unsafe_allow_html=True)
+st.title("🩺 Diabetes Prediction System")
 
-# --------------------------------------------------
-# USER DATABASE
-# --------------------------------------------------
+st.write(
+    "Machine Learning based diabetes risk prediction "
+    "using patient clinical information."
+)
 
-USERS = {
-    "admin": "admin123",
-    "gopi": "gopi123",
-    "user": "user123"
-}
+st.divider()
 
-# --------------------------------------------------
-# SESSION STATE
-# --------------------------------------------------
+# ============================================================
+# SIDEBAR
+# ============================================================
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+st.sidebar.header("Patient Information")
 
-if "username" not in st.session_state:
-    st.session_state.username = ""
+pregnancies = st.sidebar.number_input(
+    "Pregnancies",
+    min_value=0,
+    max_value=20,
+    value=1,
+    step=1
+)
 
-# --------------------------------------------------
-# LOGOUT
-# --------------------------------------------------
+glucose = st.sidebar.number_input(
+    "Glucose",
+    min_value=0,
+    max_value=300,
+    value=120,
+    step=1
+)
 
-def logout():
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.rerun()
+blood_pressure = st.sidebar.number_input(
+    "Blood Pressure",
+    min_value=0,
+    max_value=200,
+    value=70,
+    step=1
+)
 
-# --------------------------------------------------
-# LOGIN PAGE
-# --------------------------------------------------
+skin_thickness = st.sidebar.number_input(
+    "Skin Thickness",
+    min_value=0,
+    max_value=100,
+    value=20,
+    step=1
+)
 
-if not st.session_state.logged_in:
+insulin = st.sidebar.number_input(
+    "Insulin",
+    min_value=0,
+    max_value=1000,
+    value=80,
+    step=1
+)
 
-    st.markdown(
-        '<div class="login-container">',
-        unsafe_allow_html=True
-    )
+bmi = st.sidebar.number_input(
+    "BMI",
+    min_value=0.0,
+    max_value=80.0,
+    value=25.0,
+    step=0.1
+)
 
-    st.markdown(
-        '<div class="title">🔐 Login</div>',
-        unsafe_allow_html=True
-    )
+diabetes_pedigree = st.sidebar.number_input(
+    "Diabetes Pedigree Function",
+    min_value=0.0,
+    max_value=3.0,
+    value=0.5,
+    step=0.01
+)
 
-    st.markdown(
-        '<div class="subtitle">Please enter your username and password</div>',
-        unsafe_allow_html=True
-    )
+age = st.sidebar.number_input(
+    "Age",
+    min_value=1,
+    max_value=120,
+    value=30,
+    step=1
+)
 
-    username = st.text_input(
-        "Username",
-        placeholder="Enter username"
-    )
+# ============================================================
+# INPUT DATAFRAME
+# ============================================================
 
-    password = st.text_input(
-        "Password",
-        type="password",
-        placeholder="Enter password"
-    )
+input_data = pd.DataFrame({
+    "Pregnancies": [pregnancies],
+    "Glucose": [glucose],
+    "BloodPressure": [blood_pressure],
+    "SkinThickness": [skin_thickness],
+    "Insulin": [insulin],
+    "BMI": [bmi],
+    "DiabetesPedigreeFunction": [diabetes_pedigree],
+    "Age": [age]
+})
 
-    login_button = st.button(
-        "🔓 Login",
-        use_container_width=True
-    )
+# ============================================================
+# DISPLAY INPUT
+# ============================================================
 
-    if login_button:
+st.subheader("Patient Details")
 
-        if username in USERS and USERS[username] == password:
+st.dataframe(
+    input_data,
+    use_container_width=True
+)
 
-            st.session_state.logged_in = True
-            st.session_state.username = username
+# ============================================================
+# PREDICTION BUTTON
+# ============================================================
 
-            st.success("Login successful!")
+if st.button(
+    "🔍 Predict Diabetes",
+    use_container_width=True
+):
 
-            st.rerun()
+    prediction = model.predict(
+        input_data
+    )[0]
 
-        else:
+    probability = model.predict_proba(
+        input_data
+    )[0][1]
 
-            st.error("❌ Invalid username or password")
+    probability_percent = probability * 100
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.divider()
 
-# --------------------------------------------------
-# HOME PAGE AFTER LOGIN
-# --------------------------------------------------
+    st.subheader("Prediction Result")
 
-else:
+    # ========================================================
+    # RESULT
+    # ========================================================
 
-    st.title("🏠 Welcome")
+    if prediction == 1:
 
-    st.success(
-        f"Welcome, {st.session_state.username}!"
+        st.error(
+            "⚠️ Diabetes Risk Detected"
+        )
+
+        st.write(
+            f"Predicted diabetes probability: "
+            f"**{probability_percent:.2f}%**"
+        )
+
+    else:
+
+        st.success(
+            "✅ No Diabetes Risk Detected"
+        )
+
+        st.write(
+            f"Predicted diabetes probability: "
+            f"**{probability_percent:.2f}%**"
+        )
+
+    # ========================================================
+    # PROBABILITY BAR
+    # ========================================================
+
+    st.subheader("Prediction Probability")
+
+    st.progress(
+        int(probability_percent)
     )
 
     st.write(
-        "You have successfully logged into the application."
+        f"Diabetes probability: "
+        f"{probability_percent:.2f}%"
     )
 
-    st.markdown("---")
+# ============================================================
+# INFORMATION
+# ============================================================
 
-    st.subheader("📊 Dashboard")
+st.divider()
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric("Users", "100")
-
-    with col2:
-        st.metric("Projects", "25")
-
-    with col3:
-        st.metric("Status", "Active")
-
-    st.markdown("---")
-
-    if st.button(
-        "🚪 Logout",
-        use_container_width=True
-    ):
-        logout()
+st.info(
+    "This application is for educational and research purposes. "
+    "It should not be used as a substitute for professional "
+    "medical diagnosis."
+)
